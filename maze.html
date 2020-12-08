@@ -1,0 +1,264 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script>
+
+$(document).ready(function(){
+	$(".menu6").on('click', function(){
+		//console.log($(this).attr("id"));
+		id = $(this).text();
+		console.log(id);
+		mz.root[parseInt(id)].print();
+	});
+});
+
+screen = screen.height*0.8;
+num = 40;
+const setmaze = new Set();
+done = false;
+mz = null;
+
+function init() {
+	mz = new maze(num);
+
+	//mz.print();
+	mz.draw();
+	mz.gen();
+	mz.solve();
+}
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+class cell {
+	constructor(val,root) {
+		this.value = val;
+		this.parent = root;
+		this.left = null;
+		this.right = null;
+		this.top = null;
+		this.bottom = null;
+		this.ladder = null;
+	}
+	
+	print() {
+		console.log(this.value);
+
+		if (this.left != null)
+			console.log('left', this.left.value);
+			
+		if (this.right != null)
+			console.log('right', this.right.value);
+
+		if (this.top != null)
+			console.log('top', this.top.value);
+			
+		if (this.bottom != null)
+			console.log('bottom', this.bottom.value);
+			
+		if (this.ladder != null)
+			console.log('ladder', this.ladder.value);
+	}
+	
+	draw(i,j,step) {
+		var top1 = i*step+10;
+		var left1 = j*step+10;
+		$('#cont').append($('<div/>', {class:'menu6',id:'cell'+this.value,text:'',style:'top:'+top1+'px;left:'+left1+'px;height:'+step+'px;width:'+step}));
+	}
+	
+	merge(dir) {
+		var x = this.value;
+		var dim = this.parent.dim;
+		
+		switch(dir){
+			case 0: //left
+				this.left = this.parent.root[x-1];
+				this.parent.root[x-1].right = this;
+				$("#cell"+x).css( "border-left-color", "white" );
+				$("#cell"+(x-1)).css( "border-right-color", "white" );
+				this.left.visit();
+				break;
+			case 1: //right
+				this.right = this.parent.root[x+1];
+				this.parent.root[x+1].left = this;
+				$("#cell"+x).css( "border-right-color", "white" );
+				$("#cell"+(x+1)).css( "border-left-color", "white" );
+				this.right.visit();
+				break;
+			case 2: //top
+				this.top = this.parent.root[x-dim];
+				this.parent.root[x-dim].bottom = this;
+				$("#cell"+x).css( "border-top-color", "white" );
+				$("#cell"+(x-dim)).css( "border-bottom-color", "white" );
+				this.top.visit();
+				break;
+			case 3: //bottom
+				this.bottom = this.parent.root[x+dim];
+				this.parent.root[x+dim].top = this;
+				$("#cell"+x).css( "border-bottom-color", "white" );
+				$("#cell"+(x+dim)).css( "border-top-color", "white" );
+				this.bottom.visit();
+				break;
+			default:
+				break;
+		}
+	}	
+	
+	walk() {
+		var x = this.value;
+		var dim = this.parent.dim;
+
+		var i = Math.floor(x/dim);
+		var j = x%dim;
+
+		var neighbours = new Array();
+		if (j-1>=0) if (!setmaze.has(x-1)) neighbours.push(0);
+		if (j+1<dim) if (!setmaze.has(x+1)) neighbours.push(1);
+		if (i-1>=0) if (!setmaze.has(x-dim)) neighbours.push(2);
+		if (i+1<dim) if (!setmaze.has(x+dim)) neighbours.push(3);
+		
+		var _dir = neighbours[Math.floor(Math.random() * neighbours.length)];
+		//console.log('neighbours',neighbours,_dir);
+
+		return _dir;
+	}
+	
+	visit() {
+		var x = this.value;
+		var dim = this.parent.dim;
+		
+		if (!setmaze.has(x)){
+			setmaze.add(x);
+			//console.log(x);
+			var i = Math.floor(x/dim);
+			var j = x%dim;
+			//console.log(x,i,j);
+			
+			var _dir = this.walk();
+			//console.log('neighbours',neighbours);
+			//console.log(_dir)
+			
+			this.merge(_dir);
+		}
+	}
+	
+	async solve() {
+		var x = this.value;
+
+		//await sleep(1000);
+		if (done || setmaze.has(x)) return;
+		//console.log(x);
+		
+		setmaze.add(x);
+		if (x == Math.pow(this.parent.dim,2)-1)
+			done = true;
+
+		$("#cell"+x).css("background-color","aqua");
+		
+		if (this.left != null) {
+			this.left.solve();
+		}
+		if (this.top != null) {
+			this.top.solve();
+		}
+		if (this.right != null) {
+			this.right.solve();
+		}
+		if (this.bottom != null) {
+			this.bottom.solve();
+		}
+		/*if (this.ladder != null) {
+			console.log('ladder',this.ladder.value);
+			this.ladder.solve();
+			//setTimeout(this.ladder.solve.bind(this.ladder),100);
+		}*/
+		if (!done) {
+			await sleep(200);
+			$("#cell"+x).html('');
+			$("#cell"+x).css("background-color","greenyellow");
+		}
+	}
+}	
+	
+class maze {
+	constructor(d) {
+		this.dim = d;
+		this.root = new Array();
+		//console.log('dim',this.dim);
+		
+		for (var i=0; i<Math.pow(d,2); i++) {
+			this.root.push(new cell(i,this));
+		}
+	}
+	
+	print() {		
+		for (var k=0; k<Math.pow(this.dim,2); k++) {
+			this.root[k].print();
+		}
+	}
+	
+	draw() {
+		var step=Math.floor(screen/this.dim);
+		var fontsize=Math.ceil(step/2.5);
+		$('#cont').css('font-size',fontsize);
+		for(var i=0;i<this.dim;i++){
+		for(var j=0;j<this.dim;j++){
+			var k = i*this.dim+j;
+			this.root[k].draw(i,j,step);
+			//setmaze.add(k);
+		}
+		}
+	}
+	
+	union(cell) {
+		if (setmaze.size < Math.pow(this.dim,2)) {
+			//console.log('group',cell);
+			//setmaze.add(cell);
+		
+			var _dir = this.root[cell].walk();
+			//console.log('_dir',_dir);
+			
+			this.root[cell].merge(_dir);
+		}
+	}
+	
+	gen() {
+		//console.log(this.root);
+		setmaze.clear();
+		done = false;
+	
+		setmaze.add(0);
+		//this.union(0);
+		setmaze.forEach(this.union,this);
+	}
+	
+	solve() {
+		//console.log('solve');
+		setmaze.clear();
+		this.root[0].solve();
+	}
+}
+
+</script>
+</head>
+<body onload="init()" style="background-color:darkviolet">
+
+<style type="text/css">
+.menu6
+{
+border-style:solid;
+border-width:3px;
+border-color:black;
+position:absolute;
+background-color:white;
+}
+</style>
+
+<div id="cont">
+</div>
+
+</body>
+</html>
+

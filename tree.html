@@ -1,0 +1,126 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+   $("body").on('touchstart', function(){
+	init();
+  });
+});
+
+screen_height = screen.height*0.8;
+screen_width = screen.width*0.8;
+num = 100;
+height = 10;
+step_x=100;
+step_y=100;
+color_line = "green";
+svg_box = "svg1";
+
+function init(dir) {
+	elem = Array.from({length: num}, () => Math.floor(Math.random() * num));
+	console.log(elem);
+	binary = new tree();
+	elem.forEach(binary.visit,binary);
+	
+	//binary.print();
+	binary.draw(dir);
+}
+
+class leaf {
+	constructor(val,ht) {
+		this.value = val;
+		this.height = ht;
+		this.left = null;
+		this.right = null;
+	}
+	
+	visit(val,ht) {
+		if (val > this.value) {
+			if (this.right != null) 
+				this.right.visit(val,ht+1);
+			else
+				this.right = new leaf(val,ht);
+		} else {
+			if (this.left != null)
+				this.left.visit(val,ht+1);
+			else
+				this.left = new leaf(val,ht);
+		}
+	}
+	
+	print() {
+		if (this.left != null)
+			this.left.print();
+		console.log(this.value,this.height);
+		if (this.right != null)
+			this.right.print();		
+	}
+	
+	draw(curr_x,curr_y) {
+		//console.log(this.height,Math.pow(2,this.height+1));
+		var num_y = Math.pow(2,this.height+1);
+		if (svg_box == 'svg1') {
+			step_x = -screen_width/num_y;
+		} else {
+			step_x = screen_width/num_y;
+		}
+		
+		if (this.left != null) {
+			$('#'+svg_box).append($('<line/>', {x1:curr_x,y1:curr_y,x2:curr_x-step_x,y2:curr_y+step_y,style:"stroke:"+color_line+";stroke-width:5"}));
+			this.left.draw(curr_x-step_x,curr_y+step_y);
+		}
+		if (this.right != null) {
+			$('#'+svg_box).append($('<line/>', {x1:curr_x,y1:curr_y,x2:curr_x+step_x,y2:curr_y+step_y,style:"stroke:"+color_line+";stroke-width:5"}));
+			this.right.draw(curr_x+step_x,curr_y+step_y);
+		}
+	}
+} 
+
+class tree {
+	constructor() {
+		this.root = null;
+	}
+	
+	visit(val) {
+		if (this.root != null)
+			this.root.visit(val,1);
+		else
+			this.root = new leaf(val,1);
+	}
+	
+	print() {
+		this.root.print();
+	}
+	
+	draw(dir) {
+		step_y=-50;
+		$('#'+svg_box).empty();
+		this.root.draw(screen_width/2,screen_height);				
+		
+		$("#cont").html($("#cont").html());
+	}
+}
+
+</script>
+</head>
+<body onload="init()">
+<style type="text/css">
+body {
+  background-color:yellow;
+}
+</style>
+
+<div id="cont">
+<svg height="100%" width="100%">
+Sorry, your browser does not support inline SVG.
+<g id="svg1">
+</g>
+<g id="svg2">
+</g>
+</svg>
+</div>
+</body>
+</html>
+
